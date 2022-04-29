@@ -1,41 +1,20 @@
-<!DOCTYPE html>
-<html lang="en"><head>
-          <title>appratt - May 2022 Sabbatical</title>
-        <meta charset="utf-8">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <link rel="stylesheet" href="https://aesthetic-programming.net/theme/css/reset.css" type="text/css" media="all" charset="utf-8">
-        <link rel="stylesheet" href="https://aesthetic-programming.net/theme/css/codehilite.css" type="text/css" media="all" charset="utf-8">
-        <link rel="stylesheet" href="https://aesthetic-programming.net/theme/css/shared.css" type="text/css" media="all" charset="utf-8">
-        <link rel="stylesheet" href="https://aesthetic-programming.net/theme/css/styles.css" type="text/css" media="all" charset="utf-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
-
-
-    <link rel="stylesheet" href="https://aesthetic-programming.net/theme/js/codemirror/codemirror.css" type="text/css" media="all" charset="utf-8">
-    <link rel="stylesheet" href="https://aesthetic-programming.net/theme/css/p5-widget-codemirror-theme.css" type="text/css" media="all" charset="utf-8">
-
-</head>
-
-<body class="page">
-    <header id="banner" class="body">
-        <h1><a href="https://appratt.com/">appratt.com</a></h1>
-    </header>
-    <nav id="menu">
-        <ul>
-                    <li><a href="../">home</a></li>
-                    <!--<li class="spacer"></li>-->
-                    <li><a href="../about/">about</a></li>
-        </ul>
-    </nav><!-- /#menu -->
-
+    <link rel="stylesheet" href="../css/pico.classless.css">
+    <title>May 2022 Sabbatical</title>
+  </head>
+  <body>
     <main>
-    <h1>Sabbatical Opportunities</h1>
-
-    <section>
       <h2>Ideas</h2>
-      <p>Current ideas for creative projects from May 7 through June 6. Note this whole page layout and style is taken from <a href="https://aesthetic-programming.net">Aesthetic Programming: A Handbook of Software Studies</a></li>
-
-      </p>
-    </section>
+      <p>Current ideas for creative projects from May 7 through June 6. </p>
 
       <h2 id="music">Music</h2>
       <ul>
@@ -101,118 +80,5 @@
 
 
     </main>
-
-    <section class="right">
-    <section id="sketch--toggle--navbar">
-        <template>
-            <span class="sketch--toggle">interactive sketch</span>
-        </template>
-    </section>
-        <section id="canvas"></section>
-    </section>
-
-
-
-
-
-    <script>
-        (function () {
-            var header = document.querySelector('header'),
-                nav = document.querySelector('nav');
-            header.addEventListener('mouseenter', function () {
-                nav.dataset.active = 'true';
-            });
-            nav.addEventListener('mouseleave', function () {
-                delete nav.dataset.active;
-            });
-        })();
-    </script>
-
-    <script>
-        function Hsection(e, i, HX){
-            if(e.tagName == "H2") {
-                // create a new numbered section
-                section = document.createElement('section');
-                section.classList.add('section');
-                section.setAttribute('id', 'section' + i);
-                e.parentNode.insertBefore(section, e.nextSibling);
-
-                // add a numbered class to elements until the next h2
-                while(e.nextElementSibling != null && e.nextElementSibling.tagName != HX) {
-                    classe = "section-" + i;
-                    e.classList.add(classe);
-                    e.nextElementSibling.classList.add(classe);
-                    e = e.nextElementSibling;
-                }
-
-                // we put all numbered elements in dedicated section
-                items = document.getElementsByClassName('section-' + i);
-
-                for (var i=0; i < items.length; i++) {
-                    section.appendChild(items[i])
-                }
-            }
-            if(e.tagName == "H3") {
-                subsection = document.createElement('div');
-                subsection.classList.add('subsection');
-                subsection.setAttribute('id', 'subsection' + i);
-                e.parentNode.insertBefore(subsection, e.nextSibling);
-
-                // add a numbered class to elements until the next h2
-                while(e.nextElementSibling != null && e.nextElementSibling.tagName != HX) {
-                    classe = "subsection-" + i;
-                    e.classList.add(classe);
-                    e.nextElementSibling.classList.add(classe);
-                    e = e.nextElementSibling;
-                }
-
-                // we put all numbered elements in dedicated section
-                items = document.getElementsByClassName('subsection-' + i);
-
-                for (var i=0; i < items.length; i++) {
-                    subsection.appendChild(items[i])
-                }
-            }
-        }
-
-
-        (function() {
-
-            // AUTOMATIC SECTION WRAPPING
-            h2s = document.querySelectorAll("h2");
-            h3s = document.querySelectorAll("h3");
-
-            for (var i=0; i < h2s.length; i++) {
-                Hsection(h2s[i], i, "H2");
-            }
-
-            for (var i=0; i < h3s.length; i++) {
-                Hsection(h3s[i], i, "H3");
-            }
-
-            // ADD <FIGURE> CLASSES
-            function figureAddClass(className){
-                elts = document.querySelectorAll("img." + className);
-                for (var i = 0; i < elts.length; i++) {
-                    elts[i].parentElement.classList.add(className);
-
-                }
-            }
-
-            figureAddClass("float");
-            figureAddClass("float-right");
-            figureAddClass("medium");
-
-        })();
-    </script>
-
-    <script src="https://aesthetic-programming.net/theme/js/p5.js-widget/p5-widget.js"></script>
-
-    <script src="https://aesthetic-programming.net/theme/js/codemirror/codemirror.js"></script>
-    <script src="https://aesthetic-programming.net/theme/js/codemirror/addon/runmode.js"></script>
-    <script src="https://aesthetic-programming.net/theme/js/codemirror/javascript.js"></script>
-    <script src="https://aesthetic-programming.net/theme/js/activateCodeblocks.js"></script>
-
-
-
-</body></html>
+  </body>
+</html>
