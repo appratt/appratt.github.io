@@ -1,0 +1,15 @@
+
+To use these fonts on a web page, copy this code into the <head> tag of your HTML.
+
+<link rel="stylesheet" href="https://use.typekit.net/evu5imy.css">
+
+<link rel="stylesheet" href="https://use.typekit.net/ogl7fuu.css">
+
+<link rel="stylesheet" href="https://use.typekit.net/owf6uxb.css">
+<link rel="stylesheet" href="https://use.typekit.net/owf6uxb.css">
+
+<link rel="stylesheet" href="https://use.typekit.net/awx0kaf.css">
+
+<link rel="stylesheet" href="https://use.typekit.net/erw1inm.css">
+
+<link rel="stylesheet" href="https://use.typekit.net/gpe4dlw.css">
