@@ -4,7 +4,7 @@ backend:
   branch: master
   # Replace with wherever your OAuth proxy ends up living
   # (e.g. https://appratt-cms-auth.your-subdomain.workers.dev)
-  base_url: https://appratt-cms-auth.appratt.pages.dev
+  base_url: https://appratt-cms-auth.pages.dev/
   auth_endpoint: auth
 
 # Where uploaded images get committed, and how they're referenced
