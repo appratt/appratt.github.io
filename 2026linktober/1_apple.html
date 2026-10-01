@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Apple tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page-bg: #cfe8ef;
+    --hint-ink: #fdf6e3;
+    --hint-shadow: rgba(40, 70, 35, 0.55);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --page-bg: #cfe8ef; }
+  }
+  :root[data-theme="dark"] { --page-bg: #cfe8ef; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--page-bg);
+  }
+  canvas {
+    display: block;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  #hint {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+    text-align: center;
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 1.15rem;
+    color: var(--hint-ink);
+    text-shadow: 0 1px 6px var(--hint-shadow);
+    pointer-events: none;
+    transition: opacity 0.8s ease;
+  }
+  #hint.gone { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="hint">Tap the tree</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script>
+// ---------- state ----------
+let W, H, groundY, band, baseY, cx, ccy, rx, ry, trunkW, trunkTopY, appleR, bg;
+let blobsBack = [], blobsMid = [], blobsFront = [];
+let branches = [], slots = [];
+let falling = [], resting = [];
+let shake = 0;
+const MAX_RESTING = 45;
+const APPLE_COLORS = ['#d63a2f', '#c42b2b', '#e2543a', '#b8222f', '#e9b93b'];
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Branch tips in canopy-normalised coords (-1..1), with where the branch starts on the trunk.
+const TIPS = [
+  [-0.88, 0.40, 'low'], [-0.58, 0.12, 'low'], [-0.30, -0.35, 'high'],
+  [0.02, -0.55, 'high'], [0.32, -0.30, 'high'], [0.60, 0.10, 'low'],
+  [0.90, 0.42, 'low'], [-0.72, -0.20, 'high'], [0.74, -0.16, 'high']
+];
+
+function setup() {
+  pixelDensity(min(2, window.devicePixelRatio || 1));
+  createCanvas(windowWidth, windowHeight);
+  build();
+  layout();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  falling = [];
+  layout();
+}
+
+// ---------- one-time randomised shapes (normalised, so they survive resizes) ----------
+function build() {
+  randomSeed(11);
+  noiseSeed(5);
+
+  for (let i = 0; i < 26; i++) {
+    const a = random(TWO_PI), d = sqrt(random());
+    blobsBack.push({ nx: cos(a) * d * 0.78, ny: sin(a) * d * 0.78, s: random(0.28, 0.46), ph: random(TWO_PI) });
+  }
+  while (blobsMid.length < 16) {
+    const a = random(TWO_PI), d = sqrt(random());
+    const nx = cos(a) * d * 0.85, ny = sin(a) * d * 0.85;
+    if (ny < 0.25) blobsMid.push({ nx, ny, s: random(0.2, 0.34), ph: random(TWO_PI) });
+  }
+  while (blobsFront.length < 14) {
+    const a = random(TWO_PI), d = sqrt(random());
+    const nx = cos(a) * d * 0.92, ny = sin(a) * d * 0.92;
+    if (ny < -0.1 || abs(nx) > 0.78) blobsFront.push({ nx, ny, s: random(0.14, 0.26), ph: random(TWO_PI) });
+  }
+}
+
+// ---------- layout that depends on window size ----------
+function layout() {
+  W = windowWidth; H = windowHeight;
+  groundY = H * 0.80;
+  band = H * 0.13;
+  baseY = groundY + band * 0.12;
+
+  ry = min(H * 0.27, W * 0.30);
+  rx = min(ry * 1.3, W * 0.46);
+  trunkW = max(14, ry * 0.17);
+  const trunkH = H * 0.30;
+  trunkTopY = baseY - trunkH;
+  cx = W / 2;
+  ccy = trunkTopY - ry * 0.35;
+  appleR = max(8, ry * 0.075);
+
+  // branches as cubic beziers
+  branches = TIPS.map(([nx, ny, kind]) => {
+    const sx = cx + (nx > 0 ? 1 : -1) * trunkW * 0.15;
+    const sy = kind === 'low' ? trunkTopY + trunkW * 0.4 : trunkTopY - ry * 0.28;
+    const tx = cx + nx * rx * 0.95;
+    const ty = ccy + ny * ry;
+    const dx = tx - sx;
+    return {
+      sx, sy, tx, ty,
+      c1x: sx + dx * 0.15, c1y: sy - ry * 0.32,
+      c2x: tx - dx * 0.38, c2y: ty + ry * 0.12,
+      w: kind === 'low' ? trunkW * 0.42 : trunkW * 0.34
+    };
+  });
+
+  // apple slots: hang from the outer part of each branch
+  if (slots.length === 0) {
+    randomSeed(3);
+    branches.forEach((_, i) => {
+      slots.push(makeSlot(i, random(0.5, 0.68)));
+      slots.push(makeSlot(i, random(0.82, 0.96)));
+    });
+  }
+  buildBackground();
+}
+
+function makeSlot(b, t) {
+  return { b, t, present: true, grow: 1, regrowAt: 0, col: random(APPLE_COLORS) };
+}
+
+function branchPoint(i, t, sway) {
+  const b = branches[i];
+  return {
+    x: bezierPoint(b.sx, b.c1x, b.c2x, b.tx, t) + sway * pow(t, 1.3),
+    y: bezierPoint(b.sy, b.c1y, b.c2y, b.ty, t)
+  };
+}
+
+// ---------- static background (sky, hills, meadow) ----------
+function buildBackground() {
+  bg = createGraphics(W, H);
+  const g = bg.drawingContext;
+
+  // sky
+  let grad = g.createLinearGradient(0, 0, 0, groundY);
+  grad.addColorStop(0, '#bfe0ee');
+  grad.addColorStop(0.7, '#e9f1e4');
+  grad.addColorStop(1, '#fdeccf');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+
+  // sun
+  bg.noStroke();
+  const sunX = W * 0.82, sunY = H * 0.17, sunR = H * 0.05;
+  for (let i = 5; i > 0; i--) {
+    bg.fill(255, 244, 200, 22);
+    bg.circle(sunX, sunY, sunR * (1 + i * 0.7));
+  }
+  bg.fill('#fff4c9');
+  bg.circle(sunX, sunY, sunR * 1.6);
+
+  // hills
+  const hill = (baseOff, amp, seed, col) => {
+    bg.fill(col);
+    bg.beginShape();
+    bg.vertex(0, H);
+    for (let x = 0; x <= W + 8; x += 8) {
+      bg.vertex(x, groundY - baseOff - noise(x * 0.0035 + seed) * amp);
+    }
+    bg.vertex(W, H);
+    bg.endShape(CLOSE);
+  };
+  hill(H * 0.02, H * 0.16, 3.1, '#b7d3ac');
+  hill(H * 0.0, H * 0.10, 9.7, '#9cc293');
+
+  // meadow
+  grad = g.createLinearGradient(0, groundY - 4, 0, H);
+  grad.addColorStop(0, '#86b672');
+  grad.addColorStop(1, '#5b8f4d');
+  g.fillStyle = grad;
+  g.fillRect(0, groundY - 4, W, H - groundY + 4);
+
+  // grass flecks
+  randomSeed(21);
+  const count = floor(W * (H - groundY) / 900);
+  for (let i = 0; i < count; i++) {
+    const x = random(W), y = random(groundY, H);
+    const len = map(y, groundY, H, 4, 14);
+    bg.stroke(random() < 0.5 ? '#4e8043' : '#9ccb7c');
+    bg.strokeWeight(1.4);
+    bg.line(x, y, x + random(-3, 3), y - len);
+  }
+  bg.noStroke();
+}
+
+// ---------- interaction ----------
+function hitTree(mx, my) {
+  const dx = (mx - cx) / (rx * 1.05), dy = (my - ccy) / (ry * 1.05);
+  if (dx * dx + dy * dy <= 1) return true;
+  return abs(mx - cx) < trunkW * 1.2 && my > trunkTopY - ry * 0.3 && my < baseY;
+}
+
+function mousePressed() {
+  if (!hitTree(mouseX, mouseY)) return;
+  shake = ry * 0.045;
+  document.getElementById('hint').classList.add('gone');
+  releaseApples();
+  return false;
+}
+
+function releaseApples() {
+  const now = millis();
+  const ready = slots.filter(s => s.present && s.grow > 0.7);
+  shuffle(ready, true);
+  let released = 0;
+  for (const s of ready.slice(0, 7)) {
+    spawnApple(s.b, s.t, s.col, random(0, 380), s.grow);
+    s.present = false;
+    s.regrowAt = now + random(4500, 9000);
+    released++;
+  }
+  // keep it lively even when the tree is nearly bare
+  for (let i = released; i < 4; i++) {
+    spawnApple(floor(random(branches.length)), random(0.5, 0.95), random(APPLE_COLORS), random(0, 380), 1);
+  }
+}
+
+function spawnApple(b, t, col, wait, grow) {
+  falling.push({
+    b, t, col, wait, r: appleR * grow,
+    x: 0, y: 0, vx: random(-1.3, 1.3) * (W / 900), vy: 0,
+    rot: random(-0.3, 0.3), vr: random(-0.04, 0.04),
+    d: random(0.05, 1), released: false
+  });
+}
+
+// ---------- drawing helpers ----------
+function drawApple(x, y, r, rot, col, hanging) {
+  push();
+  translate(x, y);
+  rotate(rot);
+  noStroke();
+  fill(0, 0, 0, 28);
+  ellipse(r * 0.12, r * 0.14, r * 2.0, r * 1.9);
+  fill(col);
+  ellipse(-r * 0.3, 0, r * 1.3, r * 1.5);
+  ellipse(r * 0.3, 0, r * 1.3, r * 1.5);
+  fill(255, 255, 255, 80);
+  ellipse(-r * 0.42, -r * 0.3, r * 0.36, r * 0.55);
+  stroke('#5b3d2a');
+  strokeWeight(max(1.5, r * 0.15));
+  line(0, -r * 0.5, r * 0.1, -r * 1.0);
+  noStroke();
+  fill('#4f9a45');
+  push();
+  translate(r * 0.12, -r * 0.88);
+  rotate(-0.6);
+  ellipse(r * 0.35, 0, r * 0.7, r * 0.34);
+  pop();
+  pop();
+}
+
+function drawBlobs(list, col, sway, now, shade) {
+  noStroke();
+  for (const b of list) {
+    const wob = reduceMotion ? 0 : sin(now * 0.0015 + b.ph) * ry * 0.008;
+    const x = cx + b.nx * rx + sway + wob;
+    const y = ccy + b.ny * ry;
+    const d = b.s * ry * 2;
+    fill(col);
+    circle(x, y, d);
+    if (shade) {
+      fill(255, 255, 255, 22);
+      circle(x - d * 0.14, y - d * 0.16, d * 0.62);
+    }
+  }
+}
+
+function drawTrunk() {
+  noStroke();
+  fill('#5b3d2a');
+  beginShape();
+  vertex(cx - trunkW * 1.5, baseY + 4);
+  bezierVertex(cx - trunkW * 0.7, baseY - trunkW * 0.8, cx - trunkW * 0.6, baseY - trunkW * 2, cx - trunkW * 0.55, trunkTopY);
+  vertex(cx + trunkW * 0.55, trunkTopY);
+  bezierVertex(cx + trunkW * 0.6, baseY - trunkW * 2, cx + trunkW * 0.7, baseY - trunkW * 0.8, cx + trunkW * 1.5, baseY + 4);
+  endShape(CLOSE);
+  fill(0, 0, 0, 38);
+  beginShape();
+  vertex(cx + trunkW * 0.1, trunkTopY);
+  vertex(cx + trunkW * 0.55, trunkTopY);
+  bezierVertex(cx + trunkW * 0.6, baseY - trunkW * 2, cx + trunkW * 0.7, baseY - trunkW * 0.8, cx + trunkW * 1.5, baseY + 4);
+  vertex(cx + trunkW * 0.5, baseY + 4);
+  bezierVertex(cx + trunkW * 0.3, baseY - trunkW * 1.4, cx + trunkW * 0.2, baseY - trunkW * 2.4, cx + trunkW * 0.1, trunkTopY);
+  endShape(CLOSE);
+}
+
+function drawBranches(sway) {
+  stroke('#5b3d2a');
+  strokeCap(ROUND);
+  noFill();
+  for (let i = 0; i < branches.length; i++) {
+    const b = branches[i];
+    let prev = branchPoint(i, 0, sway);
+    for (let k = 1; k <= 14; k++) {
+      const t = k / 14;
+      const p = branchPoint(i, t, sway);
+      strokeWeight(lerp(b.w, 2, t));
+      line(prev.x, prev.y, p.x, p.y);
+      prev = p;
+    }
+  }
+  noStroke();
+}
+
+function slotPos(b, t, sway, r) {
+  const p = branchPoint(b, t, sway);
+  return { x: p.x, y: p.y + r * 1.35 };
+}
+
+// ---------- main loop ----------
+function draw() {
+  const dt = min(deltaTime / 16.667, 2.5);
+  const now = millis();
+  image(bg, 0, 0, W, H);
+
+  shake *= pow(0.95, dt);
+  if (shake < 0.02) shake = 0;
+  const breeze = reduceMotion ? 0 : sin(now * 0.0011) * ry * 0.004;
+  const sway = breeze + (reduceMotion ? 0 : sin(now * 0.045) * shake);
+
+  // soft shadow under the tree
+  noStroke();
+  fill(0, 0, 0, 30);
+  ellipse(cx, baseY + 4, rx * 1.7, band * 0.6);
+
+  drawBlobs(blobsBack, '#2f6b3a', sway, now, false);
+  drawTrunk();
+  drawBranches(sway);
+  drawBlobs(blobsMid, '#3f8a45', sway, now, true);
+  drawBlobs(blobsFront, '#5aa650', sway, now, true);
+
+  // hanging apples (and regrowth)
+  for (const s of slots) {
+    if (!s.present) {
+      if (now > s.regrowAt) { s.present = true; s.grow = 0; s.col = random(APPLE_COLORS); }
+      else continue;
+    }
+    if (s.grow < 1) s.grow = min(1, s.grow + 0.012 * dt);
+    const r = appleR * s.grow;
+    const p = slotPos(s.b, s.t, sway, r);
+    drawApple(p.x, p.y, r, 0, s.col, true);
+  }
+
+  // apples resting on the ground (back to front)
+  const sorted = resting.slice().sort((a, b) => a.d - b.d);
+  for (const a of sorted) {
+    drawApple(a.fx * W, groundY + a.d * band, a.r, a.rot, a.col, false);
+  }
+
+  // falling apples
+  const g = H * 0.0007;
+  for (const a of falling) {
+    if (!a.released) {
+      a.wait -= deltaTime;
+      const p = slotPos(a.b, a.t, sway, a.r);
+      a.x = p.x; a.y = p.y;
+      if (a.wait <= 0) a.released = true;
+      drawApple(a.x, a.y, a.r, 0, a.col, true);
+      continue;
+    }
+    a.vy += g * dt;
+    a.y += a.vy * dt;
+    a.x += a.vx * dt;
+    a.rot += a.vr * dt;
+    a.x = constrain(a.x, a.r, W - a.r);
+    const landY = groundY + a.d * band;
+    if (a.y >= landY) {
+      a.y = landY;
+      if (abs(a.vy) > H * 0.006) {
+        a.vy *= -0.4;
+        a.vx *= 0.75;
+        a.vr = a.vx * 0.04 + random(-0.05, 0.05);
+      } else {
+        a.vy = 0;
+        a.vx *= pow(0.88, dt);
+        a.vr = a.vx / a.r * 0.9;
+        if (abs(a.vx) < 0.04) a.done = true;
+      }
+    }
+    drawApple(a.x, a.y, a.r, a.rot, a.col, false);
+  }
+  for (const a of falling) {
+    if (a.done) {
+      resting.push({ fx: a.x / W, d: a.d, rot: a.rot, col: a.col, r: a.r });
+      if (resting.length > MAX_RESTING) resting.shift();
+    }
+  }
+  falling = falling.filter(a => !a.done);
+
+  cursor(hitTree(mouseX, mouseY) ? HAND : ARROW);
+}
+</script>
+</body>
+</html>
