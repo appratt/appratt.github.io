@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Movie Night</title>
+<style>
+  :root {
+    --page: #1b2b3d;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body { margin: 0; background: var(--page); }
+  body { display: flex; justify-content: center; align-items: flex-start; }
+  main { width: 100%; max-width: 900px; }
+  canvas { display: block; width: 100% !important; height: auto !important; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+</head>
+<body>
+<main id="game"></main>
+<script>
+// ---------- DATA ----------
+const movies = [
+  { title: "The Hollow Lantern Inn", categories: ["horror", "1980s"] },
+  { title: "Moonlit Misdeeds at Marlow Manor", categories: ["mystery", "funny", "1990s"] },
+  { title: "Quantum Tuesday", categories: ["science fiction", "funny", "2010s"] },
+  { title: "Dance Like the Tide Is Watching", categories: ["musical", "romantic", "affirming messages"] },
+  { title: "Sword of the Ember Crown", categories: ["fantasy", "adventure", "1980s"] },
+  { title: "The Last Telegram from Calais", categories: ["historical", "drama", "inclusive cast and characters"] },
+  { title: "Chrome Pursuit", categories: ["action", "science fiction", "1980s"] },
+  { title: "Nobody Told the Llama", categories: ["funny", "adventure", "2020s"] },
+  { title: "Whispers in the Cornfield", categories: ["horror", "mystery", "1990s"] },
+  { title: "Letters to a Lighthouse Keeper", categories: ["romantic", "historical", "drama"] },
+  { title: "Starboard Heart", categories: ["romantic", "science fiction", "2010s"] },
+  { title: "The Great Cupcake Heist", categories: ["funny", "action", "2010s"] },
+  { title: "Echoes of Atlantis", categories: ["adventure", "fantasy", "1990s"] },
+  { title: "Jazz Hands and Jelly Jars", categories: ["musical", "funny", "1980s"] },
+  { title: "The Quiet Crown of Queen Alba", categories: ["historical", "drama", "affirming messages"] },
+  { title: "Dead Air at Midnight FM", categories: ["horror", "mystery", "1980s"] },
+  { title: "Rocket Summer", categories: ["science fiction", "adventure", "2020s"] },
+  { title: "Dragon Tax Season", categories: ["fantasy", "funny", "2020s"] },
+  { title: "Seven Doors to Nowhere", categories: ["mystery", "horror", "2010s"] },
+  { title: "Gridlock Gladiators", categories: ["action", "funny", "1990s"] },
+  { title: "Songs for the Unfinished Bridge", categories: ["musical", "drama", "affirming messages"] },
+  { title: "The Cartographer's Daughter", categories: ["adventure", "historical", "inclusive cast and characters"] },
+  { title: "Neon Rain Protocol", categories: ["science fiction", "mystery", "1980s"] },
+  { title: "Love in the Time of Lasagna", categories: ["romantic", "funny", "2010s"] },
+  { title: "Voices of the Valley", categories: ["drama", "affirming messages", "inclusive cast and characters"] },
+  { title: "Blood Moon Boarding School", categories: ["horror", "fantasy", "2020s"] },
+  { title: "Operation Banana Split", categories: ["action", "funny", "1990s"] },
+  { title: "The Clockwork Orchard", categories: ["fantasy", "mystery", "2010s"] },
+  { title: "Frontier of Stars", categories: ["science fiction", "adventure", "1990s"] },
+  { title: "Marching Out of Montgomery", categories: ["historical", "drama", "affirming messages"] },
+  { title: "Glitter and Grit", categories: ["musical", "action", "2020s"] },
+  { title: "The Vanishing of Violet Finch", categories: ["mystery", "drama", "1990s"] },
+  { title: "Zombie Book Club", categories: ["horror", "funny", "2010s"] },
+  { title: "Under the Paper Lanterns", categories: ["romantic", "fantasy", "inclusive cast and characters"] },
+  { title: "Turbo Dads", categories: ["action", "funny", "1980s"] },
+  { title: "The Last Signal from Europa", categories: ["science fiction", "horror", "2020s"] },
+  { title: "Pirates of Puddle Island", categories: ["adventure", "funny", "1990s"] },
+  { title: "Heartbeats on Broadway", categories: ["musical", "romantic", "1980s"] },
+  { title: "Rise of the Ironwood Kingdom", categories: ["fantasy", "action", "2010s"] },
+  { title: "The Gentle Giants of Greenhollow", categories: ["fantasy", "affirming messages", "inclusive cast and characters"] },
+  { title: "Cold Case at Cabin Nine", categories: ["mystery", "horror", "2020s"] },
+  { title: "Sunrise Over Samarkand", categories: ["historical", "adventure", "inclusive cast and characters"] },
+  { title: "Everybody Sings Sunday", categories: ["musical", "affirming messages", "2010s"] },
+  { title: "Laser Tag Showdown", categories: ["action", "funny", "1990s"] },
+  { title: "Mirror, Mirror on the Moon", categories: ["science fiction", "fantasy", "funny"] },
+  { title: "The Duel at Dawn Creek", categories: ["historical", "action", "drama"] },
+  { title: "Grandma's Haunted Minivan", categories: ["funny", "horror", "2020s"] },
+  { title: "The Detective Who Dreamed in Color", categories: ["mystery", "drama", "inclusive cast and characters"] },
+  { title: "Wishing Well Wanderers", categories: ["adventure", "fantasy", "affirming messages"] },
+  { title: "Prom Night on Planet Zorb", categories: ["science fiction", "romantic", "1990s"] }
+];
+
+const family = [
+  { name: "Daria", age: 13,
+    likes: ["mystery", "funny", "2010s"],
+    dislikes: ["action", "fantasy", "drama"],
+    body: "#e8a33d", hair: "#3b2a20" },
+  { name: "Dipper", age: 10,
+    likes: ["fantasy", "science fiction", "musical"],
+    dislikes: ["horror", "romantic", "drama"],
+    body: "#6cc08b", hair: "#7a4a2a" },
+  { name: "Charlie", age: 44,
+    likes: ["fantasy", "science fiction", "1980s"],
+    dislikes: ["historical", "horror"],
+    body: "#d9604c", hair: "#2b2b33" },
+  { name: "Kai", age: 44,
+    likes: ["romantic", "1990s", "inclusive cast and characters"],
+    dislikes: ["1980s", "horror", "fantasy"],
+    body: "#8f7bd1", hair: "#a8a8b0" }
+];
+
+// ---------- RULES ----------
+// Per person: any disliked category => "dislike" (dislike wins ties),
+// otherwise any liked category => "like", otherwise "neutral".
+function reactionFor(person, movie) {
+  if (movie.categories.some(c => person.dislikes.includes(c))) return "dislike";
+  if (movie.categories.some(c => person.likes.includes(c))) return "like";
+  return "neutral";
+}
+
+function evaluate(movie) {
+  const reactions = family.map(p => reactionFor(p, movie));
+  const likes = reactions.filter(r => r === "like").length;
+  const dislikes = reactions.filter(r => r === "dislike").length;
+  const neutrals = reactions.filter(r => r === "neutral").length;
+  const works = likes >= 2 && dislikes <= 1 && neutrals <= 2;
+  return { reactions, works };
+}
+
+// ---------- GAME STATE ----------
+const W = 900, H = 640;
+const MESSAGES = {
+  prompt: "Pick a movie that most of the family can enjoy.",
+  win: "That movie works! Let's get some popcorn.",
+  retry: "Not enough fans for that one. You've got one more pick before they revolt and just watch Bakeoff.",
+  lose: "Ack. We can't agree. Let's just watch Bakeoff."
+};
+
+let choices, selected, failed, attempts, phase, lastReactions;
+// phase: "pick" | "won" | "lost"
+
+const TAPE = { w: 160, h: 90, gap: 15, y: 335 };
+const SUBMIT = { x: 270, y: 455, w: 360, h: 52 };
+
+function newRound() {
+  // Re-deal until at least one of the five can win, so every round is solvable.
+  do {
+    choices = shuffle(movies.slice()).slice(0, 5);
+  } while (!choices.some(m => evaluate(m).works));
+  selected = -1;
+  failed = [];
+  attempts = 0;
+  phase = "pick";
+  lastReactions = null;
+}
+
+function tapeRect(i) {
+  const total = 5 * TAPE.w + 4 * TAPE.gap;
+  const x0 = (W - total) / 2;
+  return { x: x0 + i * (TAPE.w + TAPE.gap), y: TAPE.y, w: TAPE.w, h: TAPE.h };
+}
+
+function inRect(mx, my, r) {
+  return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+}
+
+// ---------- p5 ----------
+function setup() {
+  const c = createCanvas(W, H);
+  c.parent("game");
+  textFont("Helvetica, Arial, sans-serif");
+  newRound();
+}
+
+function draw() {
+  background("#1b2b3d");
+
+  // Header
+  fill("#f4efe6");
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  textSize(34);
+  text("Movie Night", W / 2, 38);
+  textStyle(NORMAL);
+  textSize(16);
+  fill("#b9c4d0");
+  text("Find the movie that makes at least two people happy and no more than one unhappy.", W / 2, 72);
+
+  // Family
+  const xs = [150, 350, 550, 750];
+  for (let i = 0; i < 4; i++) drawPerson(family[i], xs[i], 235, i);
+
+  // Tapes
+  for (let i = 0; i < 5; i++) drawTape(i);
+
+  // Button
+  drawButton();
+
+  // Message
+  drawMessage();
+}
+
+function drawPerson(p, cx, baseY, idx) {
+  const s = p.age < 12 ? 0.8 : p.age < 20 ? 0.92 : 1.15;
+  const bw = 62 * s, bh = 70 * s, hr = 22 * s;
+  const headY = baseY - bh - hr + 8 * s;
+
+  noStroke();
+  // 1. body
+  fill(p.body);
+  rect(cx - bw / 2, baseY - bh, bw, bh, 22 * s, 22 * s, 0, 0);
+  // 2. head
+  fill("#f1d3b3");
+  circle(cx, headY, hr * 2);
+  // 3. hair
+  fill(p.hair);
+  arc(cx, headY, hr * 2 + 3, hr * 2 + 3, PI, TWO_PI, CHORD);
+  // 4 + 5. eyes
+  fill("#2b2b33");
+  circle(cx - hr * 0.42, headY + hr * 0.1, 5 * s);
+  circle(cx + hr * 0.42, headY + hr * 0.1, 5 * s);
+
+  // Name and age
+  fill("#f4efe6");
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  textSize(17);
+  text(p.name, cx, baseY + 20);
+  textStyle(NORMAL);
+  textSize(13);
+  fill("#b9c4d0");
+  text("Age " + p.age, cx, baseY + 38);
+
+  // Reaction to the last suggestion
+  if (lastReactions) {
+    const r = lastReactions[idx];
+    const label = r === "like" ? "Likes it" : r === "dislike" ? "Dislikes it" : "Meh";
+    const col = r === "like" ? "#4fae6e" : r === "dislike" ? "#c9473b" : "#6d7885";
+    fill(col);
+    rect(cx - 45, baseY + 52, 90, 22, 4);
+    fill("#ffffff");
+    textSize(13);
+    text(label, cx, baseY + 63);
+  }
+}
+
+function drawTape(i) {
+  const r = tapeRect(i);
+  const isFailed = failed.includes(i);
+  const isSel = selected === i;
+
+  if (isSel) {
+    fill("#f2c94c");
+    rect(r.x - 6, r.y - 6, r.w + 12, r.h + 12, 4);
+  }
+  fill(isFailed ? "#2c3440" : "#000000");
+  rect(r.x, r.y, r.w, r.h, 3);
+
+  fill(isFailed ? "#6d7885" : "#ffffff");
+  textAlign(CENTER, CENTER);
+  textStyle(NORMAL);
+  textSize(15);
+  textLeading(18);
+  text(choices[i].title, r.x + 8, r.y + 6, r.w - 16, r.h - 12);
+}
+
+function drawButton() {
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  textSize(18);
+  if (phase === "pick") {
+    const ready = selected >= 0;
+    fill(ready ? "#f2c94c" : "#3a4858");
+    rect(SUBMIT.x, SUBMIT.y, SUBMIT.w, SUBMIT.h, 6);
+    fill(ready ? "#1b2b3d" : "#8794a3");
+    text("Suggest this movie to the family!", SUBMIT.x + SUBMIT.w / 2, SUBMIT.y + SUBMIT.h / 2);
+  } else {
+    fill("#f4efe6");
+    rect(SUBMIT.x, SUBMIT.y, SUBMIT.w, SUBMIT.h, 6);
+    fill("#1b2b3d");
+    text("Play again", SUBMIT.x + SUBMIT.w / 2, SUBMIT.y + SUBMIT.h / 2);
+  }
+  textStyle(NORMAL);
+}
+
+function drawMessage() {
+  let msg = MESSAGES.prompt;
+  let col = "#b9c4d0";
+  if (phase === "won") { msg = MESSAGES.win; col = "#7fd69a"; }
+  else if (phase === "lost") { msg = MESSAGES.lose; col = "#f08a7e"; }
+  else if (attempts === 1) { msg = MESSAGES.retry; col = "#f2c94c"; }
+
+  fill(col);
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textStyle(NORMAL);
+  textSize(21);
+  textLeading(28);
+  text(msg, 60, 530, W - 120, 90);
+}
+
+function mousePressed() {
+  if (mouseX < 0 || mouseX > W || mouseY < 0 || mouseY > H) return;
+
+  if (phase !== "pick") {
+    if (inRect(mouseX, mouseY, SUBMIT)) newRound();
+    return false;
+  }
+
+  for (let i = 0; i < 5; i++) {
+    if (!failed.includes(i) && inRect(mouseX, mouseY, tapeRect(i))) {
+      selected = i;
+      return false;
+    }
+  }
+
+  if (selected >= 0 && inRect(mouseX, mouseY, SUBMIT)) {
+    const result = evaluate(choices[selected]);
+    lastReactions = result.reactions;
+    attempts++;
+    if (result.works) {
+      phase = "won";
+    } else {
+      failed.push(selected);
+      selected = -1;
+      if (attempts >= 2) phase = "lost";
+    }
+    return false;
+  }
+}
+</script>
+</body>
+</html>
